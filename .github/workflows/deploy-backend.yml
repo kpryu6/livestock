@@ -35,7 +35,7 @@ env:
   ECR_REPOSITORY: test_cicd_backend_ryu # set this to your Amazon ECR repository name
   ECS_SERVICE: cicd-backend-service # set this to your Amazon ECS service name
   ECS_CLUSTER: cicd_ryu # set this to your Amazon ECS cluster name
-  ECS_TASK_DEFINITION: .aws/test-cicd-backend-ryu-revision1.json # set this to the path to your Amazon ECS task definition
+  ECS_TASK_DEFINITION: .github/.aws/test-cicd-backend-ryu-revision1.json # set this to the path to your Amazon ECS task definition
   CONTAINER_NAME: backend-container # set this to the name of the container in the
 
 permissions:
