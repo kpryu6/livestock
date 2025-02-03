@@ -35,7 +35,6 @@ env:
   ECR_REPOSITORY: test_cicd_frontend_ryu # set this to your Amazon ECR repository name
   ECS_SERVICE: cicd-frontend-service # set this to your Amazon ECS service name
   ECS_CLUSTER: cicd_ryu # set this to your Amazon ECS cluster name
-  ECS_TASK_DEFINITION: .github/.aws/test-cicd-frontend-ryu-revision1.json # set this to the path to your Amazon ECS task definition
   CONTAINER_NAME: frontend-container # set this to the name of the container in the
 
 permissions:
@@ -63,26 +62,34 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build, tag, and push frontend image to Amazon ECR
+      - name: Build, tag, and push image to Amazon ECR
         id: build-frontend
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./frontend/
+          cd ./frontend
+          echo 'REACT_APP_STOCK_backend_URL=1thebest.site' >> .env
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Retrieve most recent ECS task definition JSON file
+        id: retrieve-task-def
+        run: |
+          aws ecs describe-task-definition --task-definition test-cicd-frontend-ryu --query taskDefinition > ./frontend/frontend-task-definition.json
+          echo "task-def-file=./frontend/frontend-task-definition.json" >> $GITHUB_ENV
 
       - name: Fill in the new image ID in the Amazon ECS task definition
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-          task-definition: ${{ env.ECS_TASK_DEFINITION }}
+          task-definition: ${{ env.task-def-file }}
           container-name: ${{ env.CONTAINER_NAME }}
           image: ${{ steps.build-frontend.outputs.image }}
 
       - name: Deploy Amazon ECS task definition
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
           task-definition: ${{ steps.task-def.outputs.task-definition }}
           service: ${{ env.ECS_SERVICE }}
