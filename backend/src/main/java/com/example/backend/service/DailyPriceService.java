@@ -6,7 +6,6 @@ import com.example.backend.entity.Stock;
 import com.example.backend.repository.DailyStockPriceRepository;
 import com.example.backend.repository.StockRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,10 +14,12 @@ import lombok.extern.slf4j.Slf4j;
 import com.example.backend.dto.DailyPriceDTO;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.example.backend.util.AwsSecretsManagerUtil;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -33,14 +34,8 @@ public class DailyPriceService {
     @Autowired
     private StockRepository stockRepository;
 
-
-    @Value("${kis.api.appKey}")
     private String appKey;
-
-    @Value("${kis.api.appSecret}")
     private String appSecret;
-
-    @Value("${kis.api.baseUrl}")
     private String baseUrl;
 
     //@Value("${kis.api.accessToken}")
@@ -50,6 +45,14 @@ public class DailyPriceService {
 
     public DailyPriceService(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
+        Map<String, String> secretsMap = AwsSecretsManagerUtil.fetchSecrets();
+        this.appKey = secretsMap.get("kis.api.appKey");
+        this.appSecret = secretsMap.get("kis.api.appSecret");
+        this.baseUrl = secretsMap.get("kis.api.baseUrl");
+
+        log.info("App Key: {}", appKey);
+        log.info("App Secret: {}", appSecret);
+        log.info("Base URL: {}", baseUrl);
     }
 
     public List<DailyPriceDTO> postDailyPrice(String stockCode, String token) throws Exception {

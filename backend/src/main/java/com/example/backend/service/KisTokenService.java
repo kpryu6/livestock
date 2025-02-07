@@ -3,11 +3,7 @@ package com.example.backend.service;
 import org.springframework.stereotype.Service;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
-import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
-import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRequest;
-import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
+import com.example.backend.util.AwsSecretsManagerUtil;
 
 import java.time.Instant;
 import java.util.Map;
@@ -17,65 +13,23 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Slf4j
 @Service
 public class KisTokenService {
-    // @Value("${kis.api.appKey}")
-    // private String appKey;
-
-    // @Value("${kis.api.appSecret}")
-    // private String appSecret;
-
-    // @Value("${kis.api.baseUrl}")
-    // private String baseUrl;
-
-    // private final String TOKEN_PATH = "/oauth2/tokenP";
-    
-    // private String cachedToken;
-    // private Instant tokenExpirationTime;
-
     private String appKey;
     private String appSecret;
     private String baseUrl;
-    private final String secretName = "prod/springboot/config"; // AWS Secrets Manager에 저장된 보안 암호 이름
-    private final Region region = Region.AP_NORTHEAST_2; // AWS 리전 (서울 리전)
-
     private final String TOKEN_PATH = "/oauth2/tokenP";
     private String cachedToken;
     private Instant tokenExpirationTime;
 
     public KisTokenService() {
-        fetchSecretsFromAWS();
+        Map<String, String> secretsMap = AwsSecretsManagerUtil.fetchSecrets();
+        this.appKey = secretsMap.get("kis.api.appKey");
+        this.appSecret = secretsMap.get("kis.api.appSecret");
+        this.baseUrl = secretsMap.get("kis.api.baseUrl");
+
+        log.info("App Key: {}", appKey);
+        log.info("App Secret: {}", appSecret);
+        log.info("Base URL: {}", baseUrl);
     }
-
-    private void fetchSecretsFromAWS() {
-        try (SecretsManagerClient secretsClient = SecretsManagerClient.builder()
-                .region(region)
-                .credentialsProvider(DefaultCredentialsProvider.create())
-                .build()) {
-
-            GetSecretValueRequest valueRequest = GetSecretValueRequest.builder()
-                    .secretId(secretName)
-                    .build();
-
-            GetSecretValueResponse valueResponse = secretsClient.getSecretValue(valueRequest);
-            String secretString = valueResponse.secretString();
-            log.info("AWS에서 가져온 Secret: {}", secretString);
-
-            // JSON 형태의 보안 암호를 파싱
-            ObjectMapper objectMapper = new ObjectMapper();
-            Map<String, String> secretsMap = objectMapper.readValue(secretString, Map.class);
-
-            this.appKey = secretsMap.get("kis.api.appKey");
-            this.appSecret = secretsMap.get("kis.api.appSecret");
-            this.baseUrl = secretsMap.get("kis.api.baseUrl");
-
-            log.info("App Key: {}", appKey);
-            log.info("App Secret: {}", appSecret);
-            log.info("Base URL: {}", baseUrl);
-        } catch (Exception e) {
-            log.error("AWS Secrets Manager에서 값을 가져오는 중 오류 발생", e);
-            throw new RuntimeException("Failed to retrieve secrets from AWS Secrets Manager", e);
-        }
-    }
-
 
     public String getAccessToken() throws Exception {
         if (isTokenValid()) {

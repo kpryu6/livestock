@@ -12,34 +12,27 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.backend.dto.ResponseOutputDTO;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
-import com.example.backend.service.KisTokenService;
 import lombok.extern.slf4j.Slf4j;
-
+import com.example.backend.util.AwsSecretsManagerUtil;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
 
 @Slf4j
 @Service
 public class KisService {
-    @Value("${kis.api.appKey}")
-    private String appkey;
-
-    @Value("${kis.api.appSecret}")
+    private String appKey;
     private String appSecret;
-
-    //@Value("${kis.api.accessToken}")
-    //private String accessToken;
+    private String baseUrl;
 
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
@@ -55,14 +48,24 @@ public class KisService {
 
     @Autowired
     public KisService(WebClient.Builder webClientBuilder, ObjectMapper objectMapper) {
-        this.webClient = webClientBuilder.baseUrl("https://openapi.koreainvestment.com:9443").build();
-        this.objectMapper =objectMapper;
+        Map<String, String> secretsMap = AwsSecretsManagerUtil.fetchSecrets();
+        this.appKey = secretsMap.get("kis.api.appKey");
+        this.appSecret = secretsMap.get("kis.api.appSecret");
+        this.baseUrl = secretsMap.get("kis.api.baseUrl");
+
+        this.webClient = webClientBuilder.baseUrl(baseUrl).build();
+        this.objectMapper = objectMapper;
+
+        log.info("App Key: {}", appKey);
+        log.info("App Secret: {}", appSecret);
+        log.info("Base URL: {}", baseUrl);
     }
+
     private HttpHeaders createVolumeRankHttpHeaders(String accessToken) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(accessToken);
-        headers.set("appkey", appkey);
+        headers.set("appkey", appKey);
         headers.set("appSecret", appSecret);
         headers.set("tr_id", "FHPST01710000");
         headers.set("custtype", "P");
