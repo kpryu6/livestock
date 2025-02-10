@@ -28,7 +28,10 @@ name: Deploy to Amazon ECS backend
 
 on:
   push:
-    branches: ["main"]
+    branches:
+      - "main"
+    paths:
+      - "backend/**" # backend 폴더 내 파일이 변경될 때만 실행
 
 env:
   AWS_REGION: ap-northeast-2 # set this to your preferred AWS region, e.g. us-west-1
