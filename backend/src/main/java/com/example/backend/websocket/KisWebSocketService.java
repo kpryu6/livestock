@@ -1,25 +1,35 @@
 package com.example.backend.websocket;
 
 import org.springframework.stereotype.Service;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.extern.slf4j.Slf4j;
+import com.example.backend.util.AwsSecretsManagerUtil;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.RequestBody;
 import okhttp3.MediaType;
-import java.io.IOException;
 
+import java.io.IOException;
+import java.util.Map;
+
+@Slf4j
 @Service
 public class KisWebSocketService {
-    @Value("${kis.api.baseUrl}")
     private String baseUrl;
-    
-    private final String APPROVAL_PATH = "/oauth2/Approval";
-    @Value("${kis.api.appKey}")
     private String appKey;
-
-    @Value("${kis.api.appSecret}")
     private String appSecret;
+    private final String APPROVAL_PATH = "/oauth2/Approval";
+
+    public KisWebSocketService() {
+        Map<String, String> secretsMap = AwsSecretsManagerUtil.fetchSecrets();
+        this.baseUrl = secretsMap.get("kis.api.baseUrl");
+        this.appKey = secretsMap.get("kis.api.appKey");
+        this.appSecret = secretsMap.get("kis.api.appSecret");
+
+        log.info("Base URL: {}", baseUrl);
+        log.info("App Key: {}", appKey);
+        log.info("App Secret: {}", appSecret);
+    }
 
     public String getWebSocketApprovalKey() throws IOException {
         OkHttpClient client = new OkHttpClient();
