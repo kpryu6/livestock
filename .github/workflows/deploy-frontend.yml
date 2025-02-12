@@ -32,6 +32,7 @@ on:
       - "main"
     paths:
       - "frontend/**" # frontend 폴더 내 파일이 변경될 때만 실행
+  workflow_dispatch: # 수동 실행 추가
 
 env:
   AWS_REGION: ap-northeast-2 # set this to your preferred AWS region, e.g. us-west-1
