@@ -20,7 +20,11 @@ public class RedisController {
     @GetMapping("/redis-data/{stockId}")
     public List<String> getRedisDataByStockId(@PathVariable String stockId) {
         String redisKey = "stock:" + stockId;
-        return redisTemplate.opsForList().range(redisKey, 0, -1); // 최신 1개 데이터
-
+        try {
+            return redisTemplate.opsForList().range(redisKey, 0, -1); // 최신 1개 데이터
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Redis 연결 오류: " + e.getMessage());
+        }
     }
 }
