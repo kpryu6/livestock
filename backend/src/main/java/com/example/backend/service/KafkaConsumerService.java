@@ -50,7 +50,7 @@ public class KafkaConsumerService {
         try {
             // Kafka 메시지 JSON 변환
             Map<String, String> stockData = objectMapper.readValue(message, new TypeReference<Map<String, String>>() {});
-            //log.info("Kafka 메시지 수신: {}", stockData);
+            log.info("Kafka 메시지 수신: {}", stockData);
 
             // 데이터 유효성 검사 및 누락값 보완
             validateAndFillData(stockData);
@@ -63,7 +63,7 @@ public class KafkaConsumerService {
 
             // 중복 데이터 확인
             if (isDuplicateData(redisKey, stockData)) {
-                //log.info("중복 데이터 무시: {}", stockData);
+                log.info("중복 데이터 무시: {}", stockData);
                 return;
             }
 
@@ -71,13 +71,14 @@ public class KafkaConsumerService {
             listOperations.leftPush(redisKey, jsonData);
             listOperations.trim(redisKey, 0, 4); // 리스트 크기를 5개로 제한
 
-            //log.info("Redis에 최신 5개 데이터 저장 완료: {}", redisKey);
+            log.info("Redis에 최신 5개 데이터 저장 완료: {}", redisKey);
 
             // TTL 설정 (예: 1시간)
             redisTemplate.expire(redisKey, 24, java.util.concurrent.TimeUnit.HOURS);
 
             // WebSocket으로 실시간 데이터 전송
             webSocketHandler.broadcastMessage(jsonData);
+            log.info("websocket으로 데이터 전송 완료: {}", jsonData);
 
         } catch (Exception e) {
             log.error("Kafka 메시지 처리 중 오류: ", e);
