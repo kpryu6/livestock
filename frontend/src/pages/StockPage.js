@@ -39,11 +39,11 @@ const StockPage = () => {
   const fetchDailyDataFromAPI = async (stockId) => {
     try {
       await fetch(
-        `http://${process.env.REACT_APP_STOCK_BACKEND_URL}/api/daily-price/${stockId}`,
+        `https://${process.env.REACT_APP_STOCK_BACKEND_URL}/api/daily-price/${stockId}`,
         { method: 'POST' }
       );
       const dailyResponse = await fetch(
-        `http://${process.env.REACT_APP_STOCK_BACKEND_URL}/api/daily-price/${stockId}`
+        `https://${process.env.REACT_APP_STOCK_BACKEND_URL}/api/daily-price/${stockId}`
       );
       if (!dailyResponse.ok) {
         throw new Error(`Daily 데이터 검색 실패 for stockId: ${stockId}`);
@@ -60,7 +60,7 @@ const StockPage = () => {
   const fetchRedisFallback = async (stockId) => {
     try {
       const response = await fetch(
-        `http://${process.env.REACT_APP_STOCK_BACKEND_URL}/api/redis-data/${stockId}`
+        `https://${process.env.REACT_APP_STOCK_BACKEND_URL}/api/redis-data/${stockId}`
       );
       if (!response.ok) {
         throw new Error(

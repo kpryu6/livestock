@@ -26,7 +26,7 @@ export const WebSocketProvider = ({ children }) => {
   useEffect(() => {
     // WebSocket 연결 생성
     const ws = new WebSocket(
-      `ws://${process.env.REACT_APP_STOCK_BACKEND_URL}/ws/stock`
+      `wss://${process.env.REACT_APP_STOCK_BACKEND_URL}/ws/stock`
     );
 
     ws.onopen = () => {

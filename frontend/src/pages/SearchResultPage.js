@@ -25,7 +25,7 @@ const SearchResultPage = () => {
   const fetchStockData = async (stockId) => {
     try {
       const response = await fetch(
-        `http://${process.env.REACT_APP_STOCK_BACKEND_URL}/api/get-popular/${stockId}`
+        `https://${process.env.REACT_APP_STOCK_BACKEND_URL}/api/get-popular/${stockId}`
       );
       if (!response.ok) {
         throw new Error(`[ERROR] 데이터 검색 실패 for stockId: ${stockId}`);
@@ -43,7 +43,7 @@ const SearchResultPage = () => {
     const fetchStockIds = async () => {
       try {
         const response = await fetch(
-          `http://${process.env.REACT_APP_STOCK_BACKEND_URL}/stocks/api/search/${query}`
+          `https://${process.env.REACT_APP_STOCK_BACKEND_URL}/stocks/api/search/${query}`
         );
         if (!response.ok) {
           throw new Error('[ERROR] Stock IDs 검색 실패');
@@ -54,7 +54,7 @@ const SearchResultPage = () => {
         console.log('[LOG] /api/search/' + JSON.stringify(stockIds));
         // Backend로 subscriptionList 전달
         await fetch(
-          `http://${process.env.REACT_APP_STOCK_BACKEND_URL}/subscriptions/update`,
+          `https://${process.env.REACT_APP_STOCK_BACKEND_URL}/subscriptions/update`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -93,7 +93,7 @@ const SearchResultPage = () => {
   const fetchRedisFallback = async (stockId) => {
     try {
       const response = await fetch(
-        `http://${process.env.REACT_APP_STOCK_BACKEND_URL}/api/redis-data/${stockId}`
+        `https://${process.env.REACT_APP_STOCK_BACKEND_URL}/api/redis-data/${stockId}`
       );
       if (!response.ok) {
         throw new Error(
