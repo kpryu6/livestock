@@ -43,7 +43,7 @@ const SearchResultPage = () => {
     const fetchStockIds = async () => {
       try {
         const response = await fetch(
-          `https://${process.env.REACT_APP_STOCK_BACKEND_URL}/stocks/api/search/${query}`
+          `https://${process.env.REACT_APP_STOCK_BACKEND_URL}/api/search/${query}`
         );
         if (!response.ok) {
           throw new Error('[ERROR] Stock IDs 검색 실패');
