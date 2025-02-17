@@ -1,17 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { StockInfo, TabsContainer, Tab } from '../styles/StockPageStyle';
 import '../styles/MainVars.css';
 import '../styles/MainStyle.css';
+import { useWebSocket } from '../WebSocketProvider';
 
 const StockPage = () => {
-  const { stockId } = useParams(); // URL에서 stockId 가져오기
+  const { stockId } = useParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('realtime');
-  const [dailyData, setDailyData] = useState([]); // 일별 데이터 상태
-  const [stockData, setStockData] = useState({}); // 초기값을 빈 배열로 설정
-  const [selectedStock, setSelectedStock] = useState(null); // 선택된 종목 데이터
+  const [dailyData, setDailyData] = useState([]); // 일별 데이터
+  // selectedStock를 배열로 관리하여 실시간 데이터를 저장 (fallback 및 socket 업데이트)
+  const [selectedStock, setSelectedStock] = useState([]);
   const navigate = useNavigate();
+
+  // 전역 WebSocketProvider에서 socket 및 업데이트 함수를 가져옴
+  const { socket, updateStockData } = useWebSocket();
+
+  // fallback 요청이 한 번만 시도되도록 하는 플래그
+  const fallbackAttempted = useRef(false);
+
+  // stockId가 바뀔 때 fallbackAttempted 초기화
+  useEffect(() => {
+    fallbackAttempted.current = false;
+  }, [stockId]);
 
   const handleTabClick = (tab) => {
     setActiveTab(tab);
@@ -23,115 +35,91 @@ const StockPage = () => {
     }
   };
 
-  const fetchStockData = async (stockId) => {
+  // 일별 데이터를 불러오는 함수 (POST 후 GET)
+  const fetchDailyDataFromAPI = async (stockId) => {
     try {
-      await fetch(`https://${process.env.REACT_APP_STOCK_BACKEND_URL}/api/daily-price/${stockId}`, {
-        method: 'POST',
-      });
-
+      await fetch(
+        `http://${process.env.REACT_APP_STOCK_BACKEND_URL}/api/daily-price/${stockId}`,
+        { method: 'POST' }
+      );
       const dailyResponse = await fetch(
-        `https://${process.env.REACT_APP_STOCK_BACKEND_URL}/api/daily-price/${stockId}`
+        `http://${process.env.REACT_APP_STOCK_BACKEND_URL}/api/daily-price/${stockId}`
       );
       if (!dailyResponse.ok) {
-        throw new Error(`[ERROR] Daily 데이터 검색 실패 for stockId: ${stockId}`);
+        throw new Error(`Daily 데이터 검색 실패 for stockId: ${stockId}`);
       }
-
-      const dailyData = await dailyResponse.json();
-      console.log("[LOG] /api/daily-price 성공"+dailyData);
-
-      return dailyData;
+      const data = await dailyResponse.json();
+      return data;
     } catch (error) {
-      console.error(`[ERROR] Error fetching data for stockId ${stockId}:`, error);
+      console.error(`Error fetching daily data for stockId ${stockId}:`, error);
       return null;
     }
   };
 
-  useEffect(() => {
-    const fetchInitialData = async (stockId) => {
-      try {
-        const response = await fetch(
-          `https://${process.env.REACT_APP_STOCK_BACKEND_URL}/api/redis-data/${stockId}`
+  // fallback 함수: Redis에서 받은 데이터를 전체 배열로 파싱하여 반환
+  const fetchRedisFallback = async (stockId) => {
+    try {
+      const response = await fetch(
+        `http://${process.env.REACT_APP_STOCK_BACKEND_URL}/api/redis-data/${stockId}`
+      );
+      if (!response.ok) {
+        throw new Error(
+          `[ERROR] Redis 데이터 검색 실패 for stockId: ${stockId}`
         );
-        const data = await response.json();
-
-        console.log("[LOG] /api/redis-data "+data);
-
-        // 문자열 배열을 객체 배열로 변환
-        const parsedData = data.map((item) => JSON.parse(item));
-        setStockData((prevData) => ({
-          ...prevData,
-          [stockId]: parsedData,
-        })); // 상태 업데이트
-
-      } catch (error) {
-        console.error('[ERROR] Redis 초기 데이터 로드 실패:', error);
       }
-    };
+      const data = await response.json();
+      if (data.length > 0) {
+        // 배열 전체를 파싱하여 반환
+        return data.map((item) => JSON.parse(item));
+      }
+      return null;
+    } catch (error) {
+      console.error('[ERROR] /api/redis-data 오류 발생', error);
+      return null;
+    }
+  };
 
-    fetchInitialData(stockId);
-  }, [stockId]);
-
-  // WebSocket 연결
-  useEffect(() => {
-    const socket = new WebSocket(`wss://${process.env.REACT_APP_STOCK_BACKEND_URL}/ws/stock`);
-
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      //console.log("[LOG] /ws/stock "+data);
-
-      setStockData((prevData) => {
-        const updatedStockData = {
-          ...prevData,
-          [data.stockId]: [
-            data,
-            ...(prevData[data.stockId] || []).slice(0, 10),
-          ], // 최신 5개 데이터 유지
-        };
-
-        // WebSocket으로 받은 데이터가 현재 선택된 stockId와 일치하면 업데이트
-        if (data.stockId === stockId) {
-          setSelectedStock(data);
-        }
-        //console.log("[LOG] /ws/stock 성공")
-        return updatedStockData;
-      });
-    };
-
-    socket.onopen = () => {
-      console.log('[LOG] WebSocket 연결 성공');
-    };
-
-    socket.onerror = (error) => {
-      console.error('[ERROR] WebSocket 에러:', error);
-    };
-
-    socket.onclose = () => {
-      console.log('[LOG,ERROR] WebSocket 연결 종료');
-    };
-
-    return () => {
-      socket.close();
-    };
-  }, [stockId]);
-
-  // daily
+  // 일별 데이터 로드
   useEffect(() => {
     const fetchDailyData = async () => {
-      try {
-        const data = await fetchStockData(stockId);
-
-        if (data) {
-          setDailyData(data);
-        }
-      } catch (error) {
-        console.error('[ERROR] 일별 데이터 로드 실패:', error);
+      const data = await fetchDailyDataFromAPI(stockId);
+      if (data) {
+        setDailyData(data);
       }
     };
-
     fetchDailyData();
   }, [stockId]);
 
-  //console.log(dailyData);
+  // WebSocket 메시지 처리: 해당 stockId의 메시지를 받아서 selectedStock 배열에 추가 (최대 10개)
+  useEffect(() => {
+    if (!socket) return;
+    const handleMessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.stockId === stockId) {
+        setSelectedStock((prev) => [data, ...prev].slice(0, 10));
+      }
+    };
+    socket.addEventListener('message', handleMessage);
+    return () => {
+      socket.removeEventListener('message', handleMessage);
+    };
+  }, [socket, stockId]);
+
+  // fallback: 만약 selectedStock가 비어 있거나 첫 번째 항목에 currentPrice가 없으면 fallback 요청을 한 번만 시도
+  useEffect(() => {
+    if (
+      !fallbackAttempted.current &&
+      (selectedStock.length === 0 || !selectedStock[0]?.currentPrice)
+    ) {
+      fallbackAttempted.current = true;
+      fetchRedisFallback(stockId).then((redisData) => {
+        if (redisData) {
+          updateStockData(stockId, redisData);
+          setSelectedStock(redisData);
+        }
+      });
+    }
+  }, [stockId, selectedStock, updateStockData]);
 
   return (
     <div className="_0-1-home">
@@ -181,21 +169,21 @@ const StockPage = () => {
         </div>
 
         {/* Stock Info */}
-
         <StockInfo>
           {dailyData && dailyData.length > 0 ? (
             <div className="stockName">{dailyData[0].stockName}</div>
           ) : null}
-          {selectedStock ? (
+          {selectedStock && selectedStock.length > 0 ? (
             <>
-              <div className="current">{selectedStock.currentPrice}원</div>
+              {/* StockInfo에서는 배열의 첫 번째 데이터를 사용 */}
+              <div className="current">{selectedStock[0].currentPrice}원</div>
               <div className="change-section">
                 <div className="label">어제보다</div>
                 <div className="change">
-                  {selectedStock.fluctuationPrice} (
-                  {selectedStock.fluctuationRate}%){' '}
+                  {selectedStock[0].fluctuationPrice} (
+                  {selectedStock[0].fluctuationRate}%){' '}
                   {(() => {
-                    switch (selectedStock.fluctuationSign) {
+                    switch (selectedStock[0].fluctuationSign) {
                       case '1':
                         return '상한';
                       case '2':
@@ -207,36 +195,7 @@ const StockPage = () => {
                       case '5':
                         return '하락';
                       default:
-                        return 'N/A'; // 알 수 없는 값 처리
-                    }
-                  })()}
-                </div>
-              </div>
-            </>
-          ) : stockData[stockId] && stockData[stockId].length > 0 ? (
-            <>
-              <div className="current">
-                {stockData[stockId][0].currentPrice}원
-              </div>
-              <div className="change-section">
-                <div className="label">어제보다</div>
-                <div className="change">
-                  {stockData[stockId][0].fluctuationPrice} (
-                  {stockData[stockId][0].fluctuationRate}%){' '}
-                  {(() => {
-                    switch (stockData[stockId][0].fluctuationSign) {
-                      case '1':
-                        return '상한';
-                      case '2':
-                        return '상승';
-                      case '3':
-                        return '보합';
-                      case '4':
-                        return '하한';
-                      case '5':
-                        return '하락';
-                      default:
-                        return 'N/A'; // 알 수 없는 값 처리
+                        return 'N/A';
                     }
                   })()}
                 </div>
@@ -255,13 +214,13 @@ const StockPage = () => {
 
         <TabsContainer>
           <Tab
-            active={activeTab === 'realtime'}
+            $active={activeTab === 'realtime'}
             onClick={() => handleTabClick('realtime')}
           >
             실시간 체결정보
           </Tab>
           <Tab
-            active={activeTab === 'daily'}
+            $active={activeTab === 'daily'}
             onClick={() => handleTabClick('daily')}
           >
             일별 시세조회
@@ -282,79 +241,45 @@ const StockPage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {selectedStock
-                    ? // 웹소켓에서 받은 데이터 사용
-                      (stockData[stockId] || []).map((data, index) => (
-                        <tr key={index}>
-                          <td>{data.currentPrice || 'N/A'}</td>
-                          <td>{data.transactionVolume || 'N/A'}</td>
-                          <td
-                            style={{
-                              color:
-                                parseFloat(data.fluctuationPrice) > 0
-                                  ? '#FF4726'
-                                  : '#2175F2',
-                            }}
-                          >
-                            {parseFloat(data.fluctuationPrice) > 0
-                              ? `+${data.fluctuationPrice}`
-                              : data.fluctuationPrice || 'N/A'}
-                          </td>
-                          <td
-                            style={{
-                              color:
-                                parseFloat(data.fluctuationRate) > 0
-                                  ? '#FF4726'
-                                  : '#2175F2',
-                            }}
-                          >
-                            {data.fluctuationRate || 'N/A'}%
-                          </td>
-                          <td>
-                            {data.tradingTime
-                              ? `${data.tradingTime.slice(0, 2)}:${data.tradingTime.slice(
-                                  2,
-                                  4
-                                )}:${data.tradingTime.slice(4)}`
-                              : 'N/A'}
-                          </td>
-                        </tr>
-                      ))
-                    : // Redis에서 가져온 초기 데이터 사용
-                      (stockData[stockId] || []).map((data, index) => (
-                        <tr key={index}>
-                          <td>{data.currentPrice || 'N/A'}</td>
-                          <td>{data.transactionVolume || 'N/A'}</td>
-                          <td
-                            style={{
-                              color:
-                                parseFloat(data.fluctuationPrice) > 0
-                                  ? '#FF4726'
-                                  : '#2175F2',
-                            }}
-                          >
-                            {data.fluctuationPrice || 'N/A'}
-                          </td>
-                          <td
-                            style={{
-                              color:
-                                parseFloat(data.fluctuationRate) > 0
-                                  ? '#FF4726'
-                                  : '#2175F2',
-                            }}
-                          >
-                            {data.fluctuationRate || 'N/A'}%
-                          </td>
-                          <td>
-                            {data.tradingTime
-                              ? `${data.tradingTime.slice(0, 2)}:${data.tradingTime.slice(
-                                  2,
-                                  4
-                                )}:${data.tradingTime.slice(4)}`
-                              : 'N/A'}
-                          </td>
-                        </tr>
-                      ))}
+                  {selectedStock && selectedStock.length > 0 ? (
+                    selectedStock.map((data, index) => (
+                      <tr key={index}>
+                        <td>{data.currentPrice || 'N/A'}</td>
+                        <td>{data.transactionVolume || 'N/A'}</td>
+                        <td
+                          style={{
+                            color:
+                              parseFloat(data.fluctuationPrice) > 0
+                                ? '#FF4726'
+                                : '#2175F2',
+                          }}
+                        >
+                          {parseFloat(data.fluctuationPrice) > 0
+                            ? `+${data.fluctuationPrice}`
+                            : data.fluctuationPrice || 'N/A'}
+                        </td>
+                        <td
+                          style={{
+                            color:
+                              parseFloat(data.fluctuationRate) > 0
+                                ? '#FF4726'
+                                : '#2175F2',
+                          }}
+                        >
+                          {data.fluctuationRate || 'N/A'}%
+                        </td>
+                        <td>
+                          {data.tradingTime
+                            ? `${data.tradingTime.slice(0, 2)}:${data.tradingTime.slice(2, 4)}:${data.tradingTime.slice(4)}`
+                            : 'N/A'}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="5">데이터를 불러오는 중입니다...</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

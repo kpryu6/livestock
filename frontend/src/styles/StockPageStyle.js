@@ -113,11 +113,11 @@ export const Tab = styled.div`
   font-size: 16px;
   font-weight: bold;
   cursor: pointer;
-  background: ${(props) => (props.active ? 'white' : 'transparent')};
-  color: ${(props) => (props.active ? '#ff5733' : '#888')};
+  background: ${(props) => (props.$active ? 'white' : 'transparent')};
+  color: ${(props) => (props.$active ? '#ff5733' : '#888')};
   border-radius: 20px;
   box-shadow: ${(props) =>
-    props.active ? '0px 2px 4px rgba(0, 0, 0, 0.1)' : 'none'};
+    props.$active ? '0px 2px 4px rgba(0, 0, 0, 0.1)' : 'none'};
   margin: 0 10px;
 
   &:hover {

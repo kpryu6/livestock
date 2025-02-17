@@ -1,16 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import '../styles/MainVars.css';
 import '../styles/MainStyle.css';
+import { useWebSocket } from '../WebSocketProvider'; // WebSocketProvider에서 가져오기
 
 const SearchResultPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const query = new URLSearchParams(location.search).get('query');
+  const hasLogged = useRef(false); // 최초 실행 여부 추적
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredStocks, setFilteredStocks] = useState([]);
-  const [stockData, setStockData] = useState({}); // WebSocket에서 받은 실시간 데이터 저장
+
+  const { stockData, isConnected, updateStockData, setInitialStockData } =
+    useWebSocket();
 
   const handleSearch = () => {
     if (searchTerm.trim()) {
@@ -21,16 +25,16 @@ const SearchResultPage = () => {
   const fetchStockData = async (stockId) => {
     try {
       const response = await fetch(
-        `https://${process.env.REACT_APP_STOCK_BACKEND_URL}/api/get-popular/${stockId}`
+        `http://${process.env.REACT_APP_STOCK_BACKEND_URL}/api/get-popular/${stockId}`
       );
       if (!response.ok) {
         throw new Error(`[ERROR] 데이터 검색 실패 for stockId: ${stockId}`);
       }
       const data = await response.json();
-      console.log("/api/get-popular API 성공")
+      console.log('[LOG] /api/get-popular API 성공');
       return data;
     } catch (error) {
-      console.error("[ERROR] /api/get-popular 오류 발생"+error);
+      console.error('[ERROR] /api/get-popular 오류 발생' + error);
       return null;
     }
   };
@@ -39,21 +43,24 @@ const SearchResultPage = () => {
     const fetchStockIds = async () => {
       try {
         const response = await fetch(
-          `https://${process.env.REACT_APP_STOCK_BACKEND_URL}/api/search/${query}`
+          `http://${process.env.REACT_APP_STOCK_BACKEND_URL}/stocks/api/search/${query}`
         );
         if (!response.ok) {
-          throw new Error('[ERROR] Stock ID 검색 실패');
+          throw new Error('[ERROR] Stock IDs 검색 실패');
         }
 
         const stockIds = await response.json(); // 주어진 stockId 배열
 
-        console.log("[LOG] /api/search/"+JSON.stringify(stockIds));
+        console.log('[LOG] /api/search/' + JSON.stringify(stockIds));
         // Backend로 subscriptionList 전달
-        await fetch(`https://${process.env.REACT_APP_STOCK_BACKEND_URL}/subscriptions/update`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(stockIds),
-        });
+        await fetch(
+          `http://${process.env.REACT_APP_STOCK_BACKEND_URL}/subscriptions/update`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(stockIds),
+          }
+        );
 
         setFilteredStocks(stockIds);
 
@@ -61,76 +68,76 @@ const SearchResultPage = () => {
         stockIds.forEach(async (stockId) => {
           const data = await fetchStockData(stockId);
           if (data) {
-            setStockData((prevData) => ({
+            setInitialStockData((prevData) => ({
               ...prevData,
               [stockId]: data,
             }));
           }
         });
-        console.log("[LOG] /subscriptions/update 성공")
+
+        console.log('[LOG] /subscriptions/update 성공');
       } catch (error) {
         console.error('[ERROR] 검색 데이터 로드 실패:', error);
       }
     };
 
     if (query) {
+      console.log(
+        '[LOG,MONITORING] SearchResultPage Start at ' +
+          new Date().toLocaleTimeString()
+      );
       fetchStockIds();
     }
   }, [query]);
 
-  // WebSocket 연결
-  useEffect(() => {
-    const socket = new WebSocket(`wss://${process.env.REACT_APP_STOCK_BACKEND_URL}/ws/stock`);
-
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-
-      // 실시간 데이터 갱신
-      setStockData((prevData) => ({
-        ...prevData,
-        [data.stockId]: {
-          ...prevData[data.stockId],
-          ...data,
-        },
-      }));
-    };
-
-    socket.onopen = () => {
-      console.log('[LOG] WebSocket 연결 성공');
-    };
-
-    socket.onerror = (error) => {
-      console.error('[ERROR] WebSocket 에러:', error);
-    };
-
-    socket.onclose = () => {
-      console.log('[LOG,ERROR] WebSocket 연결 종료');
-    };
-
-    return () => {
-      socket.close();
-    };
-  }, []);
-
   const fetchRedisFallback = async (stockId) => {
     try {
       const response = await fetch(
-        `https://${process.env.REACT_APP_STOCK_BACKEND_URL}/api/redis-data/${stockId}`
+        `http://${process.env.REACT_APP_STOCK_BACKEND_URL}/api/redis-data/${stockId}`
       );
       if (!response.ok) {
-        throw new Error(`[ERROR] Redis 데이터 검색 실패 for stockId: ${stockId}`);
+        throw new Error(
+          `[ERROR] Redis 데이터 검색 실패 for stockId: ${stockId}`
+        );
       }
       const data = await response.json();
 
       if (data.length > 0) {
         return JSON.parse(data[0]);
       }
+
       return null;
     } catch (error) {
-      console.error("[ERROR] /api/redis-data 오류 발생"+error);
+      console.error('[ERROR] /api/redis-data 오류 발생' + error);
       return null;
     }
   };
+
+  useEffect(() => {
+    filteredStocks.forEach((stockId) => {
+      if (!stockData[stockId]?.currentPrice) {
+        fetchRedisFallback(stockId).then((redisData) => {
+          if (redisData) {
+            updateStockData(stockId, redisData);
+          }
+        });
+      }
+    });
+
+    // 모든 종목에 대해 WebSocket 연결이 되고 데이터가 채워지면 로그 출력 (한 번만)
+    if (!hasLogged.current) {
+      const allSatisfied = filteredStocks.every(
+        (stockId) => isConnected && stockData[stockId]?.currentPrice
+      );
+      if (allSatisfied && isConnected) {
+        console.log(
+          '[LOG,MONITORING] SearchResultPage End at ' +
+            new Date().toLocaleTimeString()
+        );
+        hasLogged.current = true;
+      }
+    }
+  }, [filteredStocks, stockData, isConnected, updateStockData]);
 
   return (
     <div className="_0-1-home">
@@ -210,15 +217,21 @@ const SearchResultPage = () => {
                     if (currentData === null) {
                       fetchRedisFallback(stockId).then((redisData) => {
                         if (redisData) {
-                          setStockData((prevData) => ({
-                            ...prevData,
-                            [stockId]: {
-                              ...prevData[stockId],
-                              ...redisData,
-                            },
-                          }));
+                          updateStockData(stockId, redisData);
                         }
                       });
+                    }
+
+                    const allDataFetched = filteredStocks.every(
+                      (stockId) => stockData[stockId]?.currentPrice
+                    );
+
+                    if (allDataFetched && !hasLogged.current && isConnected) {
+                      console.log(
+                        '[LOG,MONITORING] SearchResultPage End at ' +
+                          new Date().toLocaleTimeString()
+                      );
+                      hasLogged.current = true;
                     }
 
                     return (
