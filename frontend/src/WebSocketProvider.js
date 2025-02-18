@@ -54,7 +54,7 @@ export const WebSocketProvider = ({ children }) => {
       setTimeout(() => {
         setSocket(
           new WebSocket(
-            `ws://${process.env.REACT_APP_STOCK_BACKEND_URL}/ws/stock`
+            `wss://${process.env.REACT_APP_STOCK_BACKEND_URL}/ws/stock`
           )
         );
       }, 5000);
