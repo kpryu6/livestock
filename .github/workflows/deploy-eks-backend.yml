@@ -41,8 +41,8 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           git checkout -b update-image-${IMAGE_TAG}
-          sed -i 's|image: .*$|image: '"$DOCKERHUB_USERNAME/$DOCKERHUB_REPO:$IMAGE_TAG"'|' k8s/deployment.yaml
-          git add k8s/deployment.yaml
+          sed -i 's|image: .*$|image: '"$DOCKERHUB_USERNAME/$DOCKERHUB_REPO:$IMAGE_TAG"'|' ./k8s/deployment.yaml
+          git add ./k8s/deployment.yaml
           git commit -m "Update deployment image to $DOCKERHUB_USERNAME/$DOCKERHUB_REPO:$IMAGE_TAG"
           git push origin update-image-${IMAGE_TAG}
 
