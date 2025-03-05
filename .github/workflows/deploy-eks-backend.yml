@@ -6,7 +6,7 @@ on:
       - "main"
     paths:
       - "backend/**" # backend 폴더 내 파일이 변경될 때만 실행
-
+  workflow_dispatch:  # ✅ GitHub Actions에서 수동 실행 가능
 env:
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}  # Docker Hub 사용자명
   DOCKERHUB_REPO: ${{ secrets.DOCKERHUB_REPO }}                 # Docker Hub 리포지토리 이름
