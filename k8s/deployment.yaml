@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: nginx
-        image: nginx
+        image: kyungpyoryu/live-stock:b0a0695fb858fca5aeccfac95165de51faffd013
         ports:
         - containerPort: 8080
 
