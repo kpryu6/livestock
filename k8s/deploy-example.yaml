@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: test
+  name: test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: test
+  template:
+    metadata:
+      labels:
+        app: test
+    spec:
+      serviceAccountName: eks-sa
+      containers:
+      - image: nginx
+        name: test
+        env:
+        - name: SPRING_DATASOURCE_USERNAME  # ✅ Spring Boot에서 인식할 환경 변수
+          valueFrom:
+            secretKeyRef:
+              name: rds-secret
+              key: spring.datasource.username
+        - name: SPRING_DATASOURCE_PASSWORD  # ✅ Spring Boot에서 인식할 환경 변수
+          valueFrom:
+            secretKeyRef:
+              name: rds-secret
+              key: spring.datasource.password
+        volumeMounts:
+        - name: secrets-store
+          mountPath: "/mnt/secrets-store"
+          readOnly: true
+      volumes:
+      - name: secrets-store
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: "rds-secret-provider"
+
