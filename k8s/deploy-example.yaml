@@ -16,8 +16,11 @@ spec:
     spec:
       serviceAccountName: eks-sa
       containers:
-      - image: nginx
-        name: test
+      - image: kyungpyoryu/live-stock:b0a0695fb858fca5aeccfac95165de51faffd013
+        name: live-stock
+        envFrom:
+        - configMapRef:
+            name: properties
         env:
         - name: SPRING_DATASOURCE_USERNAME  # ✅ Spring Boot에서 인식할 환경 변수
           valueFrom:
