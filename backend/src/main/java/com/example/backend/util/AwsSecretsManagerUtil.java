@@ -14,7 +14,7 @@ import java.util.Map;
 public class AwsSecretsManagerUtil {
 
     private static final String SECRET_NAME = "prod/springboot/config";
-    private static final Region REGION = Region.AP_NORTHEAST_2;
+    private static final Region REGION = Region.AP_NORTHEAST_1;
 
     public static Map<String, String> fetchSecrets() {
         try (SecretsManagerClient secretsClient = SecretsManagerClient.builder()
