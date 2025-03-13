@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    livestock: frontend
+  name: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      livestock: frontend
+  template:
+    metadata:
+      labels:
+        livestock: backend
+    spec:
+      serviceAccountName: eks-sa
+      containers:
+      - image: nginx 
+        name: live-stock
+
