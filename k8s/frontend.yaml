@@ -16,6 +16,6 @@ spec:
     spec:
       serviceAccountName: eks-sa
       containers:
-      - image: nginx 
+      - image: kyungpyoryu/live-stock:1b4895ba369de48f3250a0662b9351534cd15da4
         name: live-stock
 
