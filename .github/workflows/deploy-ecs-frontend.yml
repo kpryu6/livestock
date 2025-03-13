@@ -24,21 +24,22 @@
 #    See the documentation for each action used below for the recommended IAM policies for this IAM user,
 #    and best practices on handling the access key credentials.
 
-name: Deploy to Amazon ECS backend
+name: Deploy to Amazon ECS frontend
 
 on:
   push:
-    branches:
-      - "main"
-    paths:
-      - "backend/**" # backend 폴더 내 파일이 변경될 때만 실행
+    # branches:
+    #   - "main"
+    # paths:
+    #   - "frontend/**" # frontend 폴더 내 파일이 변경될 때만 실행
+  workflow_dispatch: # 수동 실행 추가
 
 env:
   AWS_REGION: ap-northeast-2 # set this to your preferred AWS region, e.g. us-west-1
-  ECR_REPOSITORY: test_cicd_backend_ryu # set this to your Amazon ECR repository name
-  ECS_SERVICE: cicd-backend-service # set this to your Amazon ECS service name
+  ECR_REPOSITORY: test_cicd_frontend_ryu # set this to your Amazon ECR repository name
+  ECS_SERVICE: cicd-frontend-service # set this to your Amazon ECS service name
   ECS_CLUSTER: cicd_ryu # set this to your Amazon ECS cluster name
-  CONTAINER_NAME: backend-container # set this to the name of the container in the
+  CONTAINER_NAME: frontend-container # set this to the name of the container in the
 
 permissions:
   contents: read
@@ -50,6 +51,7 @@ jobs:
     environment: production
 
     steps:
+      # actions/checkout@v4 스텝이 실행된 후 기본 작업 디렉토리는 레포지토리의 루트 폴더
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -64,21 +66,23 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build, tag, and push backend image to Amazon ECR
-        id: build-backend
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-frontend
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./backend/
+          cd ./frontend
+          echo 'REACT_APP_STOCK_BACKEND_URL=1thebest.site' >> .env
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
       - name: Retrieve most recent ECS task definition JSON file
         id: retrieve-task-def
         run: |
-          aws ecs describe-task-definition --task-definition test-cicd-backend-ryu --query taskDefinition > ./backend/backend-task-definition.json
-          echo "task-def-file=./backend/backend-task-definition.json" >> $GITHUB_ENV
+          aws ecs describe-task-definition --task-definition test-cicd-frontend-ryu --query taskDefinition > ./frontend/frontend-task-definition.json
+          echo "task-def-file=./frontend/frontend-task-definition.json" >> $GITHUB_ENV
 
       - name: Fill in the new image ID in the Amazon ECS task definition
         id: task-def
@@ -86,7 +90,7 @@ jobs:
         with:
           task-definition: ${{ env.task-def-file }}
           container-name: ${{ env.CONTAINER_NAME }}
-          image: ${{ steps.build-backend.outputs.image }}
+          image: ${{ steps.build-frontend.outputs.image }}
 
       - name: Deploy Amazon ECS task definition
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2

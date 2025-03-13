@@ -1,16 +1,16 @@
-name: EKS CI Backend
+name: EKS CI Frontend
 
 on:
   push:
     branches:
       - "main"
     paths:
-      - "backend/**" # backend 폴더 내 파일이 변경될 때만 실행
+      - "frontend/**" # frontend 폴더 내 파일이 변경될 때만 실행
   workflow_dispatch: # ✅ GitHub Actions에서 수동 실행 가능
 env:
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }} # Docker Hub 사용자명
   DOCKERHUB_REPO: ${{ secrets.DOCKERHUB_REPO }} # Docker Hub 리포지토리 이름
-  IMAGE_NAME: backend-container # 컨테이너 이름
+  IMAGE_NAME: frontend-container # 컨테이너 이름
 
 # permissions:
 #   contents: write  # GitHub Actions가 새 브랜치를 생성할 수 있도록 설정
@@ -33,7 +33,7 @@ jobs:
         env:
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t $DOCKERHUB_USERNAME/$DOCKERHUB_REPO:$IMAGE_TAG ./backend/
+          docker build -t $DOCKERHUB_USERNAME/$DOCKERHUB_REPO:$IMAGE_TAG ./frontend/
           docker push $DOCKERHUB_USERNAME/$DOCKERHUB_REPO:$IMAGE_TAG
 
       - name: Checkout Repository
@@ -45,7 +45,7 @@ jobs:
         env:
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          sed -i 's|image: .*$|image: '"$DOCKERHUB_USERNAME/$DOCKERHUB_REPO:$IMAGE_TAG"'|' ./k8s/backend.yaml
+          sed -i 's|image: .*$|image: '"$DOCKERHUB_USERNAME/$DOCKERHUB_REPO:$IMAGE_TAG"'|' ./k8s/frontend.yaml
 
       - name: Commit and Push Changes
         env:
@@ -54,6 +54,6 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
 
-          git add ./k8s/backend.yaml
+          git add ./k8s/frontend.yaml
           git commit -m "Update deployment image to $DOCKERHUB_USERNAME/$DOCKERHUB_REPO:$IMAGE_TAG"
           git push origin main
