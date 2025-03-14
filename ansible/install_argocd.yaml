@@ -1,0 +1,21 @@
+- name: Install ArgoCD on EKS
+  hosts: localhost
+  tasks:
+    - name: Add ArgoCD Helm Repository
+      command: helm repo add argo https://argoproj.github.io/argo-helm
+
+    - name: Update Helm Repository
+      command: helm repo update
+
+    - name: Create Namespace for ArgoCD
+      kubernetes.core.k8s:
+        api_version: v1
+        kind: Namespace
+        name: argocd
+        state: present
+
+    - name: Install ArgoCD using Helm
+      command: >
+        helm install argocd argo/argo-cd
+        --namespace argocd
+        --create-namespace
