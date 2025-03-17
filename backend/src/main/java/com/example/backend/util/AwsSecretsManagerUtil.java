@@ -28,7 +28,7 @@ public class AwsSecretsManagerUtil {
 
             GetSecretValueResponse valueResponse = secretsClient.getSecretValue(valueRequest);
             String secretString = valueResponse.secretString();
-            log.info("AWS에서 가져온 Secret: {}", secretString);
+            // log.info("AWS에서 가져온 Secret: {}", secretString);
 
             ObjectMapper objectMapper = new ObjectMapper();
             return objectMapper.readValue(secretString, Map.class);
