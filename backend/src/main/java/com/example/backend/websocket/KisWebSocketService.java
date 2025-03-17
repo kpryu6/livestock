@@ -26,9 +26,9 @@ public class KisWebSocketService {
         this.appKey = secretsMap.get("kis.api.appKey");
         this.appSecret = secretsMap.get("kis.api.appSecret");
 
-        log.info("Base URL: {}", baseUrl);
-        log.info("App Key: {}", appKey);
-        log.info("App Secret: {}", appSecret);
+        // log.info("Base URL: {}", baseUrl);
+        // log.info("App Key: {}", appKey);
+        // log.info("App Secret: {}", appSecret);
     }
 
     public String getWebSocketApprovalKey() throws IOException {

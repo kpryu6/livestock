@@ -26,9 +26,9 @@ public class KisTokenService {
         this.appSecret = secretsMap.get("kis.api.appSecret");
         this.baseUrl = secretsMap.get("kis.api.baseUrl");
 
-        log.info("App Key: {}", appKey);
-        log.info("App Secret: {}", appSecret);
-        log.info("Base URL: {}", baseUrl);
+        // log.info("App Key: {}", appKey);
+        // log.info("App Secret: {}", appSecret);
+        // log.info("Base URL: {}", baseUrl);
     }
 
     public String getAccessToken() throws Exception {
@@ -43,8 +43,8 @@ public class KisTokenService {
             appKey, appSecret
         );
         
-        log.info("Request URL: {}", baseUrl + TOKEN_PATH);
-        log.info("Request Body: {}", jsonBody);
+        // log.info("Request URL: {}", baseUrl + TOKEN_PATH);
+        // log.info("Request Body: {}", jsonBody);
         
         RequestBody body = RequestBody.create(
             MediaType.parse("application/json"), 
@@ -59,8 +59,8 @@ public class KisTokenService {
                 
         try (Response response = client.newCall(request).execute()) {
             String responseBody = response.body().string();
-            log.info("Response Code: {}", response.code());
-            log.info("Response Body: {}", responseBody);
+            // log.info("Response Code: {}", response.code());
+            // log.info("Response Body: {}", responseBody);
             
             if (!response.isSuccessful()) {
                 throw new RuntimeException("API 호출 실패: " + response.code() + ", Body: " + responseBody);

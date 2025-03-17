@@ -17,7 +17,7 @@ public class RedisConfig {
 
     @Bean
     public RedisConnectionFactory redisConnectionFactory() {
-        // Sentinel 관련 환경변수
+        // Sentinel 환경변수 읽기
         String sentinelMaster = System.getenv("spring.redis.sentinel.master");
         String sentinelNodes = System.getenv("spring.redis.sentinel.nodes");
 
@@ -29,11 +29,11 @@ public class RedisConfig {
         log.info("✅ [ENV CHECK] Sentinel Master: {}", sentinelMaster);
         log.info("✅ [ENV CHECK] Sentinel Nodes: {}", sentinelNodes);
 
-        // Sentinel 설정 구성
+        // Redis Sentinel Configuration 생성
         RedisSentinelConfiguration sentinelConfig = new RedisSentinelConfiguration();
         sentinelConfig.master(sentinelMaster);
 
-        // sentinelNodes는 쉼표(,)로 구분된 "host:port" 문자열이어야 합니다.
+        // 여러 노드가 있을 경우 쉼표로 구분되었다고 가정 (단일 노드인 경우도 동작)
         String[] nodes = sentinelNodes.split(",");
         for (String node : nodes) {
             String[] parts = node.split(":");
@@ -54,7 +54,7 @@ public class RedisConfig {
         RedisTemplate<String, String> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
 
-        // Key와 Value를 String으로 직렬화
+        // 키와 값 직렬화: String 사용
         StringRedisSerializer serializer = new StringRedisSerializer();
         template.setKeySerializer(serializer);
         template.setHashKeySerializer(serializer);
