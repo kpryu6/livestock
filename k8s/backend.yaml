@@ -16,7 +16,7 @@ spec:
     spec:
       serviceAccountName: eks-sa
       containers:
-      - image: kyungpyoryu/live-stock:4978a56708f29fbbc84bf96cf737034058f8bd34
+      - image: kyungpyoryu/live-stock:b13be9d55e8f1681e1121209c6ea19323f34761f
         name: live-stock
         envFrom:
         - configMapRef:
