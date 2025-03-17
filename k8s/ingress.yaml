@@ -4,33 +4,43 @@ metadata:
   name: my-app-ingress
   namespace: default
   annotations:
+    kubernetes.io/ingress.class: "alb"                           
     alb.ingress.kubernetes.io/scheme: "internet-facing"           
     alb.ingress.kubernetes.io/target-type: "ip"                
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:ap-northeast-1:396913715402:certificate/576da209-49e0-4bbf-a13d-d06cb6e9ff07"
 spec:
-  ingressClassName: "alb"
   rules:
-    - http:
+    - host: kpryu.xyz
+      http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: frontend-svc                                  
+                name: frontend-svc
                 port:
-                  number: 80                                     
-          - path: /websocket/connect
-            pathType: Prefix
-            backend:
-              service:
-                name: backend-svc                                  
-                port:
-                  number: 8080                                    
+                  number: 80
           - path: /api
             pathType: Prefix
             backend:
               service:
-                name: backend-svc                                  
+                name: backend-svc
                 port:
                   number: 8080
+          - path: /subscriptions/update
+            pathType: Prefix
+            backend:
+              service:
+                name: backend-svc
+                port:
+                  number: 8080
+          - path: /ws/stock
+            pathType: Prefix
+            backend:
+              service:
+                name: backend-svc
+                port:
+                  number: 8080
+
 

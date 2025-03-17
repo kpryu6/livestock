@@ -19,9 +19,7 @@ data:
   SPRING_KAFKA_PRODUCER_KEY_SERIALIZER: "org.apache.kafka.common.serialization.StringSerializer"
   SPRING_KAFKA_PRODUCER_VALUE_SERIALIZER: "org.apache.kafka.common.serialization.StringSerializer"
   
-  spring.redis.host: "my-redis"
-  spring.redis.port: "6379"
   spring.redis.sentinel.master: "mymaster"
-  spring.redis.sentinel.nodes: "my-redis-headless:26379"
+  spring.redis.sentinel.nodes: "my-redis-headless.redis.svc.cluster.local:26379"
 
   SPRINGDOC_SWAGGER_UI_PATH: "/swagger-ui.html"    
