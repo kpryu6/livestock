@@ -1,0 +1,38 @@
+- name: Uninstall AWS Load Balancer Controller and associated resources
+  hosts: localhost
+  gather_facts: false
+  vars:
+    aws_account_id: "396913715402"
+    eks_oidc_provider: "oidc.eks.ap-northeast-1.amazonaws.com/id/1D02A8BAF6EEDD716BC78AABD70E9C48"
+    eks_cluster_name: "eks-ryu"
+    aws_region: "ap-northeast-1"
+    eks_vpc_id: "vpc-04a85fac9f4c01cfd"
+  tasks:
+    - name: Uninstall AWS Load Balancer Controller via Helm
+      ansible.builtin.shell: >
+        helm uninstall aws-load-balancer-controller -n kube-system
+      environment:
+        HELM_EXPERIMENTAL_OCI: "1"
+
+    - name: Delete Service Account for AWS Load Balancer Controller
+      kubernetes.core.k8s:
+        state: absent
+        definition:
+          apiVersion: v1
+          kind: ServiceAccount
+          metadata:
+            name: aws-load-balancer-controller
+            namespace: kube-system
+
+    - name: Delete IAM role for AWS Load Balancer Controller
+      amazon.aws.iam_role:
+        name: "AWSLoadBalancerControllerIAMRole"
+        state: absent
+
+    - name: Delete IAM policy for AWS Load Balancer Controller
+      amazon.aws.iam_policy:
+        iam_type: "role"
+        iam_name: "AWSLoadBalancerControllerIAMRole"
+        policy_name: "AWSLoadBalancerControllerIAMPolicy"
+        state: absent
+
