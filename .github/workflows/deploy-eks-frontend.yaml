@@ -21,6 +21,8 @@ jobs:
     name: Build and Push to Docker Hub
     runs-on: ubuntu-latest
     environment: production
+    env:
+      IMAGE_TAG: ${{ github.sha }}  # job 레벨에 IMAGE_TAG를 정의하면 이후 단계에서도 사용 가능
 
     steps:
       - name: Checkout Repo
@@ -30,8 +32,6 @@ jobs:
         run: echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
 
       - name: Build and Push Docker Image
-        env:
-          IMAGE_TAG: ${{ github.sha }}
         run: |
           cd ./frontend
           echo 'REACT_APP_STOCK_BACKEND_URL=kpryu.xyz' >> .env
