@@ -48,11 +48,15 @@ jobs:
         run: |
           kustomize edit set image $DOCKERHUB_USERNAME/$DOCKERHUB_REPO=$DOCKERHUB_USERNAME/$DOCKERHUB_REPO:$IMAGE_TAG
           cat kustomization.yaml  # 업데이트 결과 확인
-
+      
       - name: Commit and Push Changes
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add k8s/overlays/prod/frontend/kustomization.yaml
-          git commit -m "Update prod deployment image to $DOCKERHUB_USERNAME/$DOCKERHUB_REPO:$IMAGE_TAG"
-          git push origin main
+          if ! git diff --cached --quiet; then
+            git commit -m "Update prod deployment image to $DOCKERHUB_USERNAME/$DOCKERHUB_REPO:$IMAGE_TAG"
+            git push origin main
+          else
+            echo "No changes to commit."
+          fi
