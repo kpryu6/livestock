@@ -15,6 +15,6 @@ spec:
         livestock: frontend 
     spec:
       containers:
-      - image: kyungpyoryu/live-stock:fe8a9ff8faa07544b1b204501861ff7fcf6e2d92
+      - image: kyungpyoryu/live-stock:latest
         name: live-stock
 
