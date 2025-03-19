@@ -1,0 +1,27 @@
+- name: Install Kafka Cluster on EKS
+  hosts: localhost
+  tasks:
+    - name: Add Bitnami Helm Repository
+      command: helm repo add bitnami https://charts.bitnami.com/bitnami
+
+    - name: Update Helm Repository
+      command: helm repo update
+
+    - name: Create Namespace for Kafka
+      kubernetes.core.k8s:
+        api_version: v1
+        kind: Namespace
+        name: kafka
+        state: present
+
+    - name: Install Kafka Cluster using Helm
+      command: >
+        helm install my-kafka -n kafka \
+          --set volumePermissions.enabled=true \
+          --set global.storageClass="gp2" \
+          --set replicaCount=3 \
+          --set service.type=ClusterIP \
+          --set zookeeper.enabled=false \
+          --set kraft.enabled=true \
+          --set listeners.client.protocol=PLAINTEXT \
+          oci://registry-1.docker.io/bitnamicharts/kafka

@@ -3,11 +3,29 @@
   gather_facts: false
   vars:
     aws_account_id: "396913715402"
-    eks_oidc_provider: "oidc.eks.ap-northeast-1.amazonaws.com/id/1D02A8BAF6EEDD716BC78AABD70E9C48"
     eks_cluster_name: "eks-ryu"
     aws_region: "ap-northeast-1"
-    eks_vpc_id: "vpc-04a85fac9f4c01cfd"
   tasks:
+    - name: Retrieve EKS Cluster VPC ID
+      ansible.builtin.command: >
+        aws eks describe-cluster --name {{ eks_cluster_name }} --region {{ aws_region }} --query "cluster.resourcesVpcConfig.vpcId" --output text
+      register: eks_vpc_cmd
+      changed_when: false
+
+    - name: Set eks_vpc_id fact
+      set_fact:
+        eks_vpc_id: "{{ eks_vpc_cmd.stdout }}"
+
+    - name: Retrieve EKS OIDC provider
+      ansible.builtin.command: >
+        aws eks describe-cluster --name {{ eks_cluster_name }} --region {{ aws_region }} --query "cluster.identity.oidc.issuer" --output text
+      register: eks_oidc_cmd
+      changed_when: false
+
+    - name: Set eks_oidc_provider fact
+      set_fact:
+        eks_oidc_provider: "{{ eks_oidc_cmd.stdout | regex_replace('^https://', '') }}"
+
     - name: Uninstall AWS Load Balancer Controller via Helm
       ansible.builtin.shell: >
         helm uninstall aws-load-balancer-controller -n kube-system

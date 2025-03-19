@@ -5,7 +5,6 @@
     aws_account_id: "396913715402"
     eks_cluster_name: "eks-ryu"
     aws_region: "ap-northeast-1"
-    eks_vpc_id: "vpc-04a85fac9f4c01cfd"
     iam_assume_policy: >
       {
         "Version": "2012-10-17",
@@ -25,6 +24,16 @@
         ]
       }
   tasks:
+    - name: Retrieve EKS Cluster VPC ID
+      ansible.builtin.command: >
+        aws eks describe-cluster --name {{ eks_cluster_name }} --region {{ aws_region }} --query "cluster.resourcesVpcConfig.vpcId" --output text
+      register: eks_vpc_cmd
+      changed_when: false
+
+    - name: Set eks_vpc_id fact
+      set_fact:
+        eks_vpc_id: "{{ eks_vpc_cmd.stdout }}"
+
     - name: Retrieve EKS OIDC provider
       ansible.builtin.command: >
         aws eks describe-cluster --name {{ eks_cluster_name }} --region {{ aws_region }} --query "cluster.identity.oidc.issuer" --output text

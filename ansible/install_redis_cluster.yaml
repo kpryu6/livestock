@@ -1,0 +1,25 @@
+- name: Install Redis Cluster on EKS
+  hosts: localhost
+  tasks:
+    - name: Add Bitnami Helm Repository
+      command: helm repo add bitnami https://charts.bitnami.com/bitnami
+
+    - name: Update Helm Repository
+      command: helm repo update
+
+    - name: Create Namespace for Redis
+      kubernetes.core.k8s:
+        api_version: v1
+        kind: Namespace
+        name: redis
+        state: present
+
+    - name: Install Redis Cluster using Helm
+      command: >
+        helm install my-redis bitnami/redis -n redis \
+          --set replica.replicaCount=3 \
+          --set auth.enabled=false \
+          --set volumePermissions.enabled=true \
+          --set master.persistence.storageClass="gp2" \
+          --set replica.persistence.storageClass="gp2" \
+          --set sentinel.enabled=true
