@@ -1,0 +1,10 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: gp2-csi
+provisioner: ebs.csi.aws.com
+parameters:
+  type: gp2
+volumeBindingMode: WaitForFirstConsumer
+# Retain 시 PVC 삭제되어도 PV(EBS 볼륨)는 남아있음
+reclaimPolicy: Retain
