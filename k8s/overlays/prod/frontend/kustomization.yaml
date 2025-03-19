@@ -8,3 +8,4 @@ resources:
 images:
 - name: kyungpyoryu/live-stock
   newName: kyungpyoryu/live-stock
+  newTag: latest
