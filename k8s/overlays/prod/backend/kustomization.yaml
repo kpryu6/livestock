@@ -9,3 +9,6 @@ images:
 - name: kyungpyoryu/live-stock
   newName: kyungpyoryu/live-stock
   newTag: d4aadfa7cab279aa4cbc741d8d6fdaacce1863ba
+
+patchesStrategicMerge:
+- replicas-patch.yaml
