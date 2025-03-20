@@ -1,10 +1,11 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - ../../../base/backend
+- ../../../base/backend
 
 # 초기 상태에서 images 블록을 정의
 # kustomize edit set image 명령으로 CI에서 수정
 images:
 - name: kyungpyoryu/live-stock
   newName: kyungpyoryu/live-stock
+  newTag: d4aadfa7cab279aa4cbc741d8d6fdaacce1863ba
