@@ -6,7 +6,8 @@ metadata:
   annotations:
     alb.ingress.kubernetes.io/scheme: "internet-facing"           
     alb.ingress.kubernetes.io/target-type: "ip"                
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]' #HTTP,HTTPS
+    alb.ingress.kubernetes.io/ssl-redirect: '443' #HTTP -> HTTPS로 리다이렉션
     alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:ap-northeast-1:396913715402:certificate/576da209-49e0-4bbf-a13d-d06cb6e9ff07"
     alb.ingress.kubernetes.io/healthcheck-path: /actuator/health
 spec:
