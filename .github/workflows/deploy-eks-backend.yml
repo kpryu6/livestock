@@ -21,7 +21,9 @@ jobs:
     name: Build and Push to Docker Hub
     runs-on: ubuntu-latest
     environment: production
-
+    env:
+      IMAGE_TAG: ${{ github.sha }}  # job 레벨에 IMAGE_TAG를 정의하면 이후 단계에서도 사용 가능
+      
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
@@ -30,8 +32,6 @@ jobs:
         run: echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
 
       - name: Build and Push Docker Image
-        env:
-          IMAGE_TAG: ${{ github.sha }}
         run: |
           docker build -t $DOCKERHUB_USERNAME/$DOCKERHUB_REPO:$IMAGE_TAG ./backend/
           docker push $DOCKERHUB_USERNAME/$DOCKERHUB_REPO:$IMAGE_TAG
@@ -41,19 +41,20 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }} # ✅ GitHub Actions가 push 권한을 가질 수 있도록 설정
 
-      - name: Update Kubernetes Deployment YAML
-        env:
-          IMAGE_TAG: ${{ github.sha }}
+      - name: Update Kustomize Image in Prod Overlay
+        working-directory: k8s/overlays/prod/backend
         run: |
-          sed -i 's|image: .*$|image: '"$DOCKERHUB_USERNAME/$DOCKERHUB_REPO:$IMAGE_TAG"'|' ./k8s/backend.yaml
-
+          kustomize edit set image $DOCKERHUB_USERNAME/$DOCKERHUB_REPO=$DOCKERHUB_USERNAME/$DOCKERHUB_REPO:$IMAGE_TAG
+          cat kustomization.yaml  # 업데이트 결과 확인
+      
       - name: Commit and Push Changes
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-
-          git add ./k8s/backend.yaml
-          git commit -m "Update deployment image to $DOCKERHUB_USERNAME/$DOCKERHUB_REPO:$IMAGE_TAG"
-          git push origin main
+          git add k8s/overlays/prod/backend/kustomization.yaml
+          if ! git diff --cached --quiet; then
+            git commit -m "Update prod deployment image to $DOCKERHUB_USERNAME/$DOCKERHUB_REPO:$IMAGE_TAG"
+            git push origin main
+          else
+            echo "No changes to commit."
+          fi
