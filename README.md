@@ -79,8 +79,7 @@ e.g. `feat: 로그인 기능 구현`
 |chore|잡일. 버전 코드 수정, 패키지 구조 변경, 파일 이동, 가독성이나 변수명 수정|
 
 ## 아키텍처
-![Architecture](https://github.com/user-attachments/assets/aa5f5ada-49ec-4e8c-97b9-ba9345a1812b)
-
+![Architecture](https://github.com/user-attachments/assets/61176cb4-3ccc-49fe-ac1e-07265221597a)
 
 ## 나의 역할
 
